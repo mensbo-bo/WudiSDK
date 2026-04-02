@@ -6,13 +6,20 @@ import uuid
 from typing import Any
 from __pstrogeWServer import __ws
 import WGMessage.WServer.utils as utils
+from UtilsServer import WSProtocol
 
+
+#===================================================================
+# This part to create Asyncronouse Websocket Server
+#===================================================================
 class WSServer:
     def __init__(self) -> None:
-        self.ServerToken = __ws.WSToken(uuid.uuid4().hex)
+        self.ServerToken = uuid.uuid4().hex
+
         self.setClient = {}
     
     def __setattr__(self, name: str, value: Any) -> None:
+        """Memblokir akse attribute properti untuk objek ini"""
         pass
 
     async def WSRun(self, host : str, port : int ) -> None:
