@@ -23,16 +23,23 @@ class WSServer:
         pass
 
     async def WSRun(self, host : str, port : int ) -> None:
+        """
+        Fungsi ini dipengil untuk menjalankan server websocket
+        """
+        if( self.setClient == {}):
+            raise ValueError("Token client is empty")
+        
         pass
 
     async def WSGetToken(self) -> Any:
+        """ Fungsi untuk melihat hasil generate token """
         return self.ServerToken.get()
     
     async def GetTokenClient(self) -> dict:
         """Menggambil token server yang sudah dibuat"""
         return self.setClient
     
-    async def GenTokenClient(self, numClient : int) -> dict:
+    async def GenTokenClient(self, numClient : int = 1) -> dict:
         """Setiap kali dipanggil websocket server akan membuat token baru
         bersama dengan jumlah klien yang ingin dibuat
         """

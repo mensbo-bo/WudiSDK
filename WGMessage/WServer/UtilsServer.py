@@ -3,6 +3,7 @@ import aiohttp
 from aiohttp import web
 
 from typing import Any
+import json
 #--------------------------------------------------
 # Kelas ini berfungsi sebagai utility websocket server
 # agar dapat bekerja dengan baik dimana menyediakan fungsi pendukung
@@ -16,6 +17,7 @@ class WSServerClient:
     def __setattr__(self, name: str, value: Any) -> None:
         pass
     def WSGetClient(self) -> Any:
+        """ Mengambil klien yang terkoneksi kedalam jaringan"""
         return self.client_dt
     
     def WSSetClient(self, ws) -> Any:
@@ -23,17 +25,21 @@ class WSServerClient:
         self.client_dt = ws
 
     async def WSSent_str(self, receiver, data):
+        # Mengirim data string ke target token bersama dengan token server
         pass
 
     async def WSSent_bytes(self, receiver, data):
+        # Mengirim data bytes ke target token bersama dengan token server
         pass
 
     async def WSSent_json(self, receiver, data):
+        # Mengirim data json ke target token bersama dengan token server
         pass
 
 
-class WSProtocol:
+class WSProtocol(WSServerClient):
     def __init__(self) -> None:
+        super().__init__()
         """
         WSProtocol adalah utility kelas untuk menjalankan Websocket Server pada class WSServer
         didalam file WGMServer
@@ -45,19 +51,46 @@ class WSProtocol:
         await ws.prepare(request)
 
         print("Websocket Running")
+        access = False
         async for msg in ws:
             json_send = {}
-            if msg.type == web.WSMsgType.TEXT:
-                if msg.data == "close":
-                    await ws.close()
-                else:
-                    print(msg.data)
+            if access:
+                """ 
+                Bagian yang akan diakses jika Server Token dan Klien Token
+                sudah di verfikasi
+                """
+                if msg.type == web.WSMsgType.TEXT:
+                    data_text = json.loads(msg.data)
+                    if data_text['type'] = "close":
+                        await ws.close()
+                    else:
+                        print(msg.data)
+                
+                elif msg.type == web.WSMsgType.BINARY:
+                    print("Receive binary")
+                
+                elif msg.type == web.WSMsgType.CLOSED:
+                    print("Webocket close connection")
 
-            elif msg.type == web.WSMsgType.ERROR:
-                print(f"Websocket connection error : {ws.exception()}")
+                elif msg.type == web.WSMsgType.ERROR:
+                    print(f"Websocket connection error : {ws.exception()}")
+
+                else:
+                    print(f"Data received: {msg.data}")
 
             else:
-                print(f"Data received: {msg.data}")
+                """ 
+                Bagian yang akan diakses jika data server token dan klien token di 
+                database belum di verifikasi dan ini hanya di akses sekali jika verifikasi
+                gagal maka websocket awakan memanggil await ws.close()
+                """
+                if msg.type == web.WSMsgType.TEXT:
+                    try:
+                        data_akses = json.loads(msg.data)
+                        print(data_akses)
+                    except Exception as e:
+                        print(e)
+
 
         print("Websocket close")
         return ws
