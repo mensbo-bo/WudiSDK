@@ -5,15 +5,16 @@ import uuid
 
 from typing import Any
 from __pstrogeWServer import __ws
-import WGMessage.WServer.utils as utils
+import utils
 from UtilsServer import WSProtocol
 
 
 #===================================================================
 # This part to create Asyncronouse Websocket Server
 #===================================================================
-class WSServer:
+class WSServer(WSProtocol):
     def __init__(self) -> None:
+        super().__init__()
         self.ServerToken = uuid.uuid4().hex
 
         self.setClient = {}
@@ -22,18 +23,15 @@ class WSServer:
         """Memblokir akse attribute properti untuk objek ini"""
         pass
 
-    async def WSRun(self, host : str, port : int ) -> None:
+    def WSRun(self, host : str, port : int ) -> None:
         """
         Fungsi ini dipengil untuk menjalankan server websocket
         """
-        if( self.setClient == {}):
-            raise ValueError("Token client is empty")
-        
-        pass
+        self.WSRunServer(host=host, port=port)
 
     async def WSGetToken(self) -> Any:
         """ Fungsi untuk melihat hasil generate token """
-        return self.ServerToken.get()
+        return self.ServerToken
     
     async def GetTokenClient(self) -> dict:
         """Menggambil token server yang sudah dibuat"""
@@ -72,6 +70,7 @@ class TCPServer:
         self.verbose = verbose
     
     async def TCPRun(self, host:str, port:int) -> None:
+        """ Menjalankan tcp Server secara asyncronouse"""
         # Get event loop
         loop = asyncio.get_running_loop()
         

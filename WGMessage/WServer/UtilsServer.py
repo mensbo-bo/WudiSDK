@@ -4,6 +4,10 @@ from aiohttp import web
 
 from typing import Any
 import json
+
+from db import modules
+from db.caching import WRedis
+
 #--------------------------------------------------
 # Kelas ini berfungsi sebagai utility websocket server
 # agar dapat bekerja dengan baik dimana menyediakan fungsi pendukung
@@ -50,6 +54,8 @@ class WSProtocol(WSServerClient):
         ws = web.WebSocketResponse(max_msg_size=0)
         await ws.prepare(request)
 
+        redis = request.app['redis']
+        
         print("Websocket Running")
         access = False
         async for msg in ws:
@@ -61,7 +67,7 @@ class WSProtocol(WSServerClient):
                 """
                 if msg.type == web.WSMsgType.TEXT:
                     data_text = json.loads(msg.data)
-                    if data_text['type'] = "close":
+                    if data_text['type'] == "close":
                         await ws.close()
                     else:
                         print(msg.data)
@@ -82,21 +88,40 @@ class WSProtocol(WSServerClient):
                 """ 
                 Bagian yang akan diakses jika data server token dan klien token di 
                 database belum di verifikasi dan ini hanya di akses sekali jika verifikasi
-                gagal maka websocket awakan memanggil await ws.close()
+                gagal maka websocket akan memanggil await ws.close()
                 """
                 if msg.type == web.WSMsgType.TEXT:
                     try:
+
                         data_akses = json.loads(msg.data)
-                        print(data_akses)
+                        #print(data_akses)
+                        print(data_akses['serverToken'])
+
+                        print(data_akses['clientToken'])
                     except Exception as e:
                         print(e)
 
 
         print("Websocket close")
         return ws
+    
+    """ Fungsi yang akan di pangil saat aplikasi web pertamakali di jalankan """
+    async def on_startup(self, app):
+        # Menjalankan aplikasi redis di background agar di gunakana
+        # didalam aplikasi server
+        app['redis'] = WRedis.RedisCache()
+        await app['redis'].WRedisConnect()
 
-    async def WSRunServer(self, host : str, port : int) -> None:
+    """ Fungsi yang akan dipangil saat aplikasih ingin dimatikan """
+    async def on_cleanup(self, app):
+        # Menutup koneksi dengan redis 
+        await app['redis'].WRedisClose()
+
+    def WSRunServer(self, host : str, port : int) -> None:
         app = web.Application()
+        app.on_startup.append(self.on_startup)
+        app.on_cleanup.append(self.on_cleanup)
+
         app.add_routes([web.get("/ws", self.WebsocketServer)])
 
         web.run_app(app, host=host, port=port)
