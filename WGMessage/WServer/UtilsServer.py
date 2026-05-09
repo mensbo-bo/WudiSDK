@@ -6,7 +6,7 @@ from typing import Any
 import json
 
 from db import modules
-from db.caching import WRedis
+from db.caching.WRedis import WRedisData
 
 #--------------------------------------------------
 # Kelas ini berfungsi sebagai utility websocket server
@@ -48,12 +48,20 @@ class WSProtocol(WSServerClient):
         WSProtocol adalah utility kelas untuk menjalankan Websocket Server pada class WSServer
         didalam file WGMServer
         """
+        self.tokens = {}
+    
+    async def TokenConfig(self, serverToken, clientToken):
         pass
 
     async def WebsocketServer(self, request : web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(max_msg_size=0)
         await ws.prepare(request)
 
+        SerToken = request.headers.get("SerToken", None)
+        CliToken = request.headers.get("CliToken", None)
+        if SerToken and CliToken:
+            pass
+        
         redis = request.app['redis']
         
         print("Websocket Running")
@@ -101,6 +109,11 @@ class WSProtocol(WSServerClient):
                     except Exception as e:
                         print(e)
 
+                elif msg.type == web.WSMsgType.ERROR:
+                    print(f"Websocket connection error : {ws.exception()}")
+                else:
+                    print("Unhandle data")
+
 
         print("Websocket close")
         return ws
@@ -109,8 +122,7 @@ class WSProtocol(WSServerClient):
     async def on_startup(self, app):
         # Menjalankan aplikasi redis di background agar di gunakana
         # didalam aplikasi server
-        app['redis'] = WRedis.RedisCache()
-        await app['redis'].WRedisConnect()
+        app['redis'] = WRedisData()
 
     """ Fungsi yang akan dipangil saat aplikasih ingin dimatikan """
     async def on_cleanup(self, app):

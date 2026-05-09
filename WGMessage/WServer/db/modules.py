@@ -5,8 +5,6 @@ import aiocache
 
 from . import config
 
-
-
 #------------------------------------------------------------
 # Class untuk membuat table yang diperlukan untuk server
 # WudiGraph
@@ -14,7 +12,7 @@ from . import config
 class WMCreateTable:
     async def WCreate_table_users(self, conn):
         await conn.execute('''
-        CREATA TABLE IF NOT EXISTS tbl_users(
+        CREATE TABLE IF NOT EXISTS tbl_users(
             id_user SERIAL PRIMARY KEY,
             username VARCHAR(200),
             password VARCHAR(255),
@@ -38,17 +36,19 @@ class WMCreateTable:
     async def WCreate_table_usertoken(self, conn):
         await conn.execute('''
         CREATE TABLE IF NOT EXISTS tbl_user_server_token(
+        user_id INT,
         user_server_token VARCHAR(100) UNIQUE,
         waktu_dibuat DATE,
         waktu_berakhir DATE,
-        FOREIGN KEY (users_id) REFERENCES tbl_users(id_user)
+        FOREIGN KEY (user_id) REFERENCES tbl_users(id_user)
         )
         ''')
 
     async def WCreate_table_temptoken(self, conn):
         await conn.execute('''
-        CREATE TABLE IF NOT EXIST tbl_temp_token(
-            FOREIGN KEY (user_token_id) RENFERENCES tbl_user_server_token(user_server_token),
+        CREATE TABLE IF NOT EXISTS tbl_temp_token(
+            user_token_id VARCHAR(100),
+            FOREIGN KEY (user_token_id) REFERENCES tbl_user_server_token(user_server_token),
             temp_client_token VARCHAR(100)        
         )
         ''')
@@ -60,12 +60,33 @@ class WMCreateTable:
 #-------------------------------------------------------------
 class WMCRUDServerUsers:
     def __init__(self) -> None:
-        self.conn = asyncio.run(self.WConnect_db())
+        self.conn = None
+
+    async def WCreate_tbl(self):
+        tbl_in = WMCreateTable()
+        await tbl_in.WCreate_table_admin(self.conn)
+        await tbl_in.WCreate_table_users(self.conn)
+        await tbl_in.WCreate_table_usertoken(self.conn)
+        await tbl_in.WCreate_table_temptoken(self.conn)
+
+        return True
+    
+    async def WDrop_tbl(self):
+        query = """
+        DROP TABLE tbl_users, tbl_admin, tbl_user_server_token, tbl_temp_token;
+        """
+        return await self.conn.execute(query)
+
 
     async def WConnect_db(self):
-        return await asyncpg.connect(
-            **config.DATABASE['postgresql']
+        parms = config.DATABASE['postgresql']
+        self.conn = await asyncpg.connect(
+            **parms
         )
+        if not self.conn:
+            return False
+        
+        return True
     
     #-------------------------------------------------------
     # Insert Data
@@ -129,6 +150,29 @@ class WMCRUDServerUsers:
         """
         return await self.conn.fetch(query, id_user)
     
+    async def WGet_ServerClient_Token(self, server_token, client_token):
+        # tbl_ut : User token
+        # tbl_tt : Temp Token
+        query = """
+        SELECT * FROM tbl_user_server_token
+        WHERE user_server_token = $1; 
+        """
+        server_token = await self.conn.fetch(query, server_token)
+        if not server_token:
+            print("Token server tidak ada")
+            return False
+        
+        query = """
+        SELECT * FROM tbl_temp_token
+        WHERE temp_client_token = $1
+        """
+        client_token = await self.conn.fetch(query, client_token)
+        if not client_token:
+            print("Client token tidak ditemukan")
+            return False
+
+        return True
+
     # ----------------------------------------------------------
     # UPDATE 
     # ----------------------------------------------------------
